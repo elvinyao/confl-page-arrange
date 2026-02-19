@@ -156,7 +156,19 @@ export function computeMovePlan(originalTree: PageNode, draftTree: PageNode): Mo
   }
 
   const parentMoves = moves.filter((move) => move.reason === 'parent-change');
-  const reorderMoves = moves.filter((move) => move.reason === 'reorder');
+  const reorderMoves = moves
+    .filter((move) => move.reason === 'reorder')
+    .sort((left, right) => {
+      const leftParent = left.toParentId ?? '';
+      const rightParent = right.toParentId ?? '';
+      if (leftParent !== rightParent) {
+        return leftParent.localeCompare(rightParent);
+      }
+      if (left.toIndex !== right.toIndex) {
+        return left.toIndex - right.toIndex;
+      }
+      return left.pageId.localeCompare(right.pageId);
+    });
   return [...parentMoves, ...reorderMoves];
 }
 
