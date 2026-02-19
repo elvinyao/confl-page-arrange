@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import {
+  AuthPayload,
   CommitRequest,
   CommitResponse,
   ConnectRequest,
@@ -18,7 +19,6 @@ import { z } from 'zod';
 import { createAdapter } from './confluence/index.js';
 import { commitMovePlan, validateMovePlan } from './services/move-service.js';
 import { loadTreeByParentUrl } from './services/tree-service.js';
-import { SessionStore } from './session-store.js';
 
 interface CreateAppOptions {
   logger?: boolean;
@@ -32,7 +32,6 @@ interface StartServerOptions {
 
 export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   const app = Fastify({ logger: options.logger ?? true });
-  const sessions = new SessionStore();
 
   // Allows browser app and Electron file-origin renderer to call API.
   app.addHook('onRequest', async (request, reply) => {
@@ -66,10 +65,7 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
 
       await adapter.verifyCredentials();
       const user = await adapter.getCurrentUser();
-      const session = sessions.create(adapter, user);
-
       const response: ConnectResponse = {
-        sessionId: session.id,
         user,
         siteInfo: {
           baseUrl: adapter.config.baseUrl,
@@ -86,18 +82,24 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   });
 
   const loadSchema = z.object({
-    sessionId: z.string().uuid(),
+    auth: z.object({
+      deploymentType: z.enum(['cloud', 'dc']),
+      baseUrl: z.string().url(),
+      credentials: z.object({
+        username: z.string().min(1),
+        secret: z.string().min(1),
+      }),
+    }),
     parentPageUrl: z.string().url(),
   });
 
   app.post('/api/tree/load', async (request, reply) => {
     try {
       const input = loadSchema.parse(request.body) as LoadTreeRequest;
-      const session = sessions.get(input.sessionId);
-      const tree = await loadTreeByParentUrl(session.adapter, input.parentPageUrl);
+      const adapter = createAdapter(toAdapterConfig(input.auth));
+      const tree = await loadTreeByParentUrl(adapter, input.parentPageUrl);
 
       assertSingleSpace(tree);
-      sessions.touchTree(session.id, tree);
 
       const response: LoadTreeResponse = {
         spaceKey: tree.spaceKey,
@@ -114,7 +116,6 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   });
 
   const planSchema = z.object({
-    sessionId: z.string().uuid(),
     originalTree: z.any(),
     draftTree: z.any(),
   });
@@ -122,10 +123,7 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   app.post('/api/tree/plan', async (request, reply) => {
     try {
       const input = planSchema.parse(request.body) as PlanRequest;
-      const session = sessions.get(input.sessionId);
-
       const plan = computeMovePlan(input.originalTree, input.draftTree);
-      sessions.touchPlan(session.id, plan);
 
       const response: PlanResponse = {
         plan,
@@ -141,20 +139,14 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   });
 
   const validateSchema = z.object({
-    sessionId: z.string().uuid(),
+    tree: z.any(),
     plan: z.array(z.any()),
   });
 
   app.post('/api/tree/validate', async (request, reply) => {
     try {
       const input = validateSchema.parse(request.body) as ValidateRequest;
-      const session = sessions.get(input.sessionId);
-
-      if (!session.lastLoadedTree) {
-        throw new Error('Tree not loaded.');
-      }
-
-      const errors = validateMovePlan(session.lastLoadedTree, input.plan);
+      const errors = validateMovePlan(input.tree, input.plan);
 
       const response: ValidateResponse = {
         ok: errors.length === 0,
@@ -170,7 +162,15 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   });
 
   const commitSchema = z.object({
-    sessionId: z.string().uuid(),
+    auth: z.object({
+      deploymentType: z.enum(['cloud', 'dc']),
+      baseUrl: z.string().url(),
+      credentials: z.object({
+        username: z.string().min(1),
+        secret: z.string().min(1),
+      }),
+    }),
+    tree: z.any(),
     plan: z.array(z.any()),
     dryRun: z.boolean().optional(),
   });
@@ -178,13 +178,7 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   app.post('/api/tree/commit', async (request, reply) => {
     try {
       const input = commitSchema.parse(request.body) as CommitRequest;
-      const session = sessions.get(input.sessionId);
-
-      if (!session.lastLoadedTree) {
-        throw new Error('Tree not loaded.');
-      }
-
-      const errors = validateMovePlan(session.lastLoadedTree, input.plan);
+      const errors = validateMovePlan(input.tree, input.plan);
       if (errors.length > 0) {
         return reply.status(409).send({
           message: 'Plan validation failed.',
@@ -192,7 +186,8 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
         });
       }
 
-      const report = await commitMovePlan(session.adapter, input.plan, {
+      const adapter = createAdapter(toAdapterConfig(input.auth));
+      const report = await commitMovePlan(adapter, input.plan, {
         dryRun: input.dryRun,
       });
 
@@ -218,6 +213,15 @@ export async function startServer(options: StartServerOptions = {}): Promise<Fas
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function toAdapterConfig(auth: AuthPayload) {
+  return {
+    deploymentType: auth.deploymentType,
+    baseUrl: auth.baseUrl,
+    username: auth.credentials.username,
+    secret: auth.credentials.secret,
+  };
 }
 
 function assertSingleSpace(root: PageNode): void {

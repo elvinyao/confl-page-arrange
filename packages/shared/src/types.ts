@@ -69,8 +69,13 @@ export interface ConnectRequest {
   credentials: CredentialsInput;
 }
 
+export interface AuthPayload {
+  deploymentType: DeploymentType;
+  baseUrl: string;
+  credentials: CredentialsInput;
+}
+
 export interface ConnectResponse {
-  sessionId: string;
   user: {
     accountId: string;
     displayName: string;
@@ -82,14 +87,13 @@ export interface ConnectResponse {
 }
 
 export interface LoadTreeRequest {
-  sessionId: string;
+  auth: AuthPayload;
   parentPageUrl: string;
 }
 
 export interface LoadTreeResponse extends TreeSnapshot {}
 
 export interface PlanRequest {
-  sessionId: string;
   originalTree: PageNode;
   draftTree: PageNode;
 }
@@ -100,7 +104,7 @@ export interface PlanResponse {
 }
 
 export interface ValidateRequest {
-  sessionId: string;
+  tree: PageNode;
   plan: MoveOperation[];
 }
 
@@ -110,7 +114,8 @@ export interface ValidateResponse {
 }
 
 export interface CommitRequest {
-  sessionId: string;
+  auth: AuthPayload;
+  tree: PageNode;
   plan: MoveOperation[];
   dryRun?: boolean;
 }

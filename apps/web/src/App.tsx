@@ -1,21 +1,23 @@
-import { useMemo, useState } from 'react';
-import { ExecutionReport, MoveOperation, PageNode, ValidationError, moveNodeInTree } from '@confl/shared';
+import { useEffect, useMemo, useState } from 'react';
+import { AuthPayload, ExecutionReport, MoveOperation, PageNode, ValidationError, moveNodeInTree } from '@confl/shared';
 import { buildPlan, commitPlan, connectSession, loadTree, validatePlan } from './api.js';
 import { PageTree } from './components/PageTree.js';
 import { PlanPreview } from './components/PlanPreview.js';
 import { createTranslator, getInitialLocale } from './i18n/index.js';
 
+const AUTH_STORAGE_KEY = 'confl_page_arrange_auth_v1';
+
 export function App() {
   const locale = getInitialLocale();
   const t = useMemo(() => createTranslator(locale), [locale]);
+  const initialAuth = loadPersistedAuth();
 
-  const [deploymentType, setDeploymentType] = useState<'cloud' | 'dc'>('cloud');
-  const [baseUrl, setBaseUrl] = useState('');
-  const [username, setUsername] = useState('');
-  const [secret, setSecret] = useState('');
+  const [deploymentType, setDeploymentType] = useState<'cloud' | 'dc'>(initialAuth?.deploymentType ?? 'cloud');
+  const [baseUrl, setBaseUrl] = useState(initialAuth?.baseUrl ?? '');
+  const [username, setUsername] = useState(initialAuth?.credentials.username ?? '');
+  const [secret, setSecret] = useState(initialAuth?.credentials.secret ?? '');
   const [parentPageUrl, setParentPageUrl] = useState('');
 
-  const [sessionId, setSessionId] = useState('');
   const [connectedUser, setConnectedUser] = useState('');
   const [originalTree, setOriginalTree] = useState<PageNode | null>(null);
   const [draftTree, setDraftTree] = useState<PageNode | null>(null);
@@ -26,8 +28,20 @@ export function App() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const canLoadTree = sessionId.length > 0;
-  const canBuildPlan = sessionId.length > 0 && originalTree !== null && draftTree !== null;
+  const hasAuth = baseUrl.trim().length > 0 && username.trim().length > 0 && secret.length > 0;
+  const canLoadTree = hasAuth;
+  const canBuildPlan = originalTree !== null && draftTree !== null;
+
+  useEffect(() => {
+    persistAuth({
+      deploymentType,
+      baseUrl,
+      credentials: {
+        username,
+        secret,
+      },
+    });
+  }, [deploymentType, baseUrl, username, secret]);
 
   return (
     <main className="app-shell">
@@ -67,13 +81,11 @@ export function App() {
           </label>
         </div>
 
-        <button className="button-primary" type="button" onClick={handleConnect} disabled={status === 'loading'}>
+        <button className="button-primary" type="button" onClick={handleConnect} disabled={status === 'loading' || !hasAuth}>
           {t('connect.connect')}
         </button>
 
-        {connectedUser && (
-          <p>{`${t('connect.connectedAs')}: ${connectedUser}`}</p>
-        )}
+        {connectedUser && <p>{`${t('connect.connectedAs')}: ${connectedUser}`}</p>}
       </section>
 
       <section className="panel">
@@ -114,10 +126,15 @@ export function App() {
           <button type="button" onClick={handleValidatePlan} disabled={status === 'loading' || plan.length === 0}>
             {t('plan.validate')}
           </button>
-          <button type="button" className="button-primary" onClick={() => handleCommit(false)} disabled={status === 'loading' || plan.length === 0}>
+          <button
+            type="button"
+            className="button-primary"
+            onClick={() => handleCommit(false)}
+            disabled={status === 'loading' || plan.length === 0 || !hasAuth}
+          >
             {t('plan.commit')}
           </button>
-          <button type="button" onClick={() => handleCommit(true)} disabled={status === 'loading' || plan.length === 0}>
+          <button type="button" onClick={() => handleCommit(true)} disabled={status === 'loading' || plan.length === 0 || !hasAuth}>
             {t('plan.dryRun')}
           </button>
         </section>
@@ -146,15 +163,7 @@ export function App() {
     setStatus('loading');
     setErrorMessage('');
     try {
-      const response = await connectSession({
-        deploymentType,
-        baseUrl,
-        credentials: {
-          username,
-          secret,
-        },
-      });
-      setSessionId(response.sessionId);
+      const response = await connectSession(buildAuthPayload(deploymentType, baseUrl, username, secret));
       setConnectedUser(response.user.displayName);
       setStatus('success');
     } catch (error) {
@@ -164,14 +173,14 @@ export function App() {
   }
 
   async function handleLoadTree() {
-    if (!sessionId) {
+    if (!hasAuth) {
       return;
     }
     setStatus('loading');
     setErrorMessage('');
     try {
       const response = await loadTree({
-        sessionId,
+        auth: buildAuthPayload(deploymentType, baseUrl, username, secret),
         parentPageUrl,
       });
       setOriginalTree(response.tree);
@@ -187,14 +196,13 @@ export function App() {
   }
 
   async function handleBuildPlan() {
-    if (!sessionId || !originalTree || !draftTree) {
+    if (!originalTree || !draftTree) {
       return;
     }
     setStatus('loading');
     setErrorMessage('');
     try {
       const response = await buildPlan({
-        sessionId,
         originalTree,
         draftTree,
       });
@@ -207,14 +215,14 @@ export function App() {
   }
 
   async function handleValidatePlan() {
-    if (!sessionId || plan.length === 0) {
+    if (!originalTree || plan.length === 0) {
       return;
     }
     setStatus('loading');
     setErrorMessage('');
     try {
       const response = await validatePlan({
-        sessionId,
+        tree: originalTree,
         plan,
       });
       setValidationErrors(response.errors);
@@ -227,14 +235,15 @@ export function App() {
   }
 
   async function handleCommit(dryRun: boolean) {
-    if (!sessionId || plan.length === 0) {
+    if (!originalTree || plan.length === 0 || !hasAuth) {
       return;
     }
     setStatus('loading');
     setErrorMessage('');
     try {
       const response = await commitPlan({
-        sessionId,
+        auth: buildAuthPayload(deploymentType, baseUrl, username, secret),
+        tree: originalTree,
         plan,
         dryRun,
       });
@@ -248,6 +257,60 @@ export function App() {
       setErrorMessage(toErrorMessage(error));
     }
   }
+}
+
+function buildAuthPayload(
+  deploymentType: 'cloud' | 'dc',
+  baseUrl: string,
+  username: string,
+  secret: string,
+): AuthPayload {
+  return {
+    deploymentType,
+    baseUrl,
+    credentials: {
+      username,
+      secret,
+    },
+  };
+}
+
+function loadPersistedAuth(): AuthPayload | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as AuthPayload;
+    if (!parsed?.deploymentType || !parsed?.baseUrl || !parsed?.credentials) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function persistAuth(auth: AuthPayload): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const shouldClear =
+    auth.baseUrl.trim().length === 0 &&
+    auth.credentials.username.trim().length === 0 &&
+    auth.credentials.secret.length === 0;
+
+  if (shouldClear) {
+    window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
 }
 
 function toErrorMessage(error: unknown): string {
