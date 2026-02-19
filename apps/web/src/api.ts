@@ -11,8 +11,10 @@ import {
   ValidateResponse,
 } from '@confl/shared';
 
+const apiBaseUrl = (window.__APP_CONFIG__?.apiBaseUrl ?? '').replace(/\/+$/, '');
+
 async function postJson<TResponse>(path: string, payload: unknown): Promise<TResponse> {
-  const response = await fetch(path, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

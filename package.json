@@ -2,21 +2,61 @@
   "name": "confl-page-arrange",
   "version": "0.1.0",
   "private": true,
+  "main": "apps/desktop/main.cjs",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
     "dev": "npm run build -w packages/shared && concurrently \"npm:dev -w apps/server\" \"npm:dev -w apps/web\"",
+    "dev:desktop": "npm run build && electron .",
     "build": "npm run build -w packages/shared && npm run build -w apps/server && npm run build -w apps/web",
+    "desktop": "electron .",
+    "pack:win": "npm run build && electron-builder --win portable --x64 --publish never",
+    "release:win": "npm run build && electron-builder --win portable --x64 --publish always",
     "test": "vitest run",
     "check:assets": "node scripts/check-no-remote-assets.mjs",
     "check": "npm run check:assets && npm run test"
   },
+  "dependencies": {
+    "@confl/shared": "file:packages/shared",
+    "fastify": "^5.2.1",
+    "zod": "^3.24.2"
+  },
   "devDependencies": {
     "@types/node": "^22.13.8",
     "concurrently": "^9.1.2",
+    "electron": "^34.0.0",
+    "electron-builder": "^24.13.3",
     "typescript": "^5.8.2",
     "vitest": "^3.2.4"
+  },
+  "build": {
+    "appId": "com.confl.pagearrange",
+    "productName": "Confl Page Arrange",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "apps/desktop/**/*",
+      "apps/server/dist/**/*",
+      "apps/web/dist/**/*",
+      "packages/shared/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "confl-page-arrange-${version}-windows-portable.${ext}"
+    }
   }
 }

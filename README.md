@@ -25,11 +25,30 @@ npm run dev
 - Web app: `http://127.0.0.1:5173`
 - API server: `http://127.0.0.1:8787`
 
+## Run Desktop (Electron)
+
+```bash
+npm install
+npm run dev:desktop
+```
+
+- Builds web/server artifacts, then launches Electron shell.
+- Electron embeds the API server on `http://127.0.0.1:8787`.
+
 ## Build
 
 ```bash
 npm run build
 ```
+
+## Build Windows Portable EXE
+
+```bash
+npm install
+npm run pack:win
+```
+
+- Output: `release/confl-page-arrange-<version>-windows-portable.exe`
 
 ## Test
 
