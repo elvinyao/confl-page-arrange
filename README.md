@@ -57,8 +57,8 @@ docker run --rm -p 8787:8787 confl-page-arrange:local
 ## GitHub Actions (GHCR)
 
 - Workflow: `.github/workflows/publish-ghcr.yml`
-- Push `main` or push a tag like `v0.1.1` to build and publish image to `ghcr.io/<owner>/<repo>`.
-- `latest` tag is published from the default branch.
+- Push a tag like `v0.1.1` (or run `workflow_dispatch`) to build and publish image to `ghcr.io/<owner>/<repo>`.
+- Published tags include the git tag, commit sha tag, and `latest`.
 
 ## Test
 
