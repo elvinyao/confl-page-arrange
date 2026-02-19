@@ -54,6 +54,17 @@ docker build -t confl-page-arrange:local .
 docker run --rm -p 8787:8787 confl-page-arrange:local
 ```
 
+## Docker Compose (GHCR Image)
+
+```bash
+cp docker-compose.example.yml docker-compose.yml
+docker compose up -d
+```
+
+- Example file: `docker-compose.example.yml`
+- Service endpoint: `http://127.0.0.1:8787`
+- Update `NO_PROXY` / `no_proxy` in the compose file if your Confluence host should bypass proxy.
+
 ## GitHub Actions (GHCR)
 
 - Workflow: `.github/workflows/publish-ghcr.yml`
