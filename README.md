@@ -41,20 +41,24 @@ npm run dev:desktop
 npm run build
 ```
 
-## Build Windows Portable EXE
+## Build Docker Image
 
 ```bash
 npm install
-npm run pack:win
+docker build -t confl-page-arrange:local .
 ```
 
-- Output: `release/confl-page-arrange-<version>-windows-portable.exe`
+- Run container:
 
-## GitHub Actions Release
+```bash
+docker run --rm -p 8787:8787 confl-page-arrange:local
+```
 
-- Workflow: `.github/workflows/release-win-portable.yml`
-- Push a tag like `v0.1.1` to trigger auto build + GitHub Release publish.
-- Manual `workflow_dispatch` builds and uploads exe as workflow artifact.
+## GitHub Actions (GHCR)
+
+- Workflow: `.github/workflows/publish-ghcr.yml`
+- Push `main` or push a tag like `v0.1.1` to build and publish image to `ghcr.io/<owner>/<repo>`.
+- `latest` tag is published from the default branch.
 
 ## Test
 
