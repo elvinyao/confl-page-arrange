@@ -45,25 +45,26 @@ npm run build
 
 ```bash
 npm install
-docker build -t confl-page-arrange:local .
+docker build -t confl-page-arrange-api:local -f Dockerfile .
+docker build -t confl-page-arrange-web:local -f Dockerfile.web .
 ```
 
-- Run container:
+- Run API-only container:
 
 ```bash
-docker run --rm -p 8787:8787 confl-page-arrange:local
+docker run --rm -p 8787:8787 confl-page-arrange-api:local
 ```
 
 ## Docker Compose (GHCR Image)
 
 ```bash
-cp docker-compose.example.yml docker-compose.yml
-docker compose up -d
+docker compose up -d --build
 ```
 
-- Example file: `docker-compose.example.yml`
-- Service endpoint: `http://127.0.0.1:8787`
-- Update `NO_PROXY` / `no_proxy` in the compose file if your Confluence host should bypass proxy.
+- Compose file: `docker-compose.yml` (`docker-compose.example.yml` is a copyable template)
+- Frontend endpoint: `http://127.0.0.1:8080`
+- API endpoint (for debugging): `http://127.0.0.1:8787` is internal only in compose; use `/api` from frontend.
+- Update `NO_PROXY` / `no_proxy` if your Confluence host should bypass proxy.
 
 ## GitHub Actions (GHCR)
 
