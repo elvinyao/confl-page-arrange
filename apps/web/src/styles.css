@@ -1,0 +1,204 @@
+:root {
+  --bg-a: #f0efe6;
+  --bg-b: #d8e2f1;
+  --panel: #fffef7;
+  --text: #1f2430;
+  --muted: #5a6475;
+  --border: #d1d6de;
+  --accent: #0b6b58;
+  --accent-soft: #d7efe7;
+  --danger: #9a2b2b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top left, var(--bg-a), transparent 45%),
+    radial-gradient(circle at bottom right, var(--bg-b), transparent 50%),
+    #f6f4ee;
+}
+
+.app-shell {
+  width: min(1100px, 92vw);
+  margin: 28px auto 36px;
+  display: grid;
+  gap: 14px;
+}
+
+.app-header {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(243, 248, 255, 0.92));
+  border: 1px solid var(--border);
+}
+
+.app-header h1 {
+  margin: 0;
+}
+
+.app-header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--panel);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-head h2 {
+  margin: 0;
+}
+
+.panel-hint {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+}
+
+label span {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+input,
+select,
+button {
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  background: #fff;
+}
+
+button {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(17, 29, 43, 0.1);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-node {
+  margin: 2px 0;
+}
+
+.tree-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #fff;
+}
+
+.tree-row--hovered {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tree-title {
+  font-weight: 600;
+}
+
+.tree-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.drop-hint {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 0.84rem;
+}
+
+.plan-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.plan-table th,
+.plan-table td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.ok-message {
+  color: var(--accent);
+}
+
+.error-box {
+  border: 1px solid #f4c2c2;
+  background: #fff1f1;
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--danger);
+}
+
+@media (max-width: 700px) {
+  .app-shell {
+    width: 94vw;
+    margin-top: 16px;
+  }
+
+  .actions-row button {
+    flex: 1 1 48%;
+  }
+}

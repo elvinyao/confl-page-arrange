@@ -1,0 +1,22 @@
+{
+  "name": "confl-page-arrange",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w packages/shared && concurrently \"npm:dev -w apps/server\" \"npm:dev -w apps/web\"",
+    "build": "npm run build -w packages/shared && npm run build -w apps/server && npm run build -w apps/web",
+    "test": "vitest run",
+    "check:assets": "node scripts/check-no-remote-assets.mjs",
+    "check": "npm run check:assets && npm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.8",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2",
+    "vitest": "^2.1.9"
+  }
+}
