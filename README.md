@@ -50,6 +50,12 @@ npm run pack:win
 
 - Output: `release/confl-page-arrange-<version>-windows-portable.exe`
 
+## GitHub Actions Release
+
+- Workflow: `.github/workflows/release-win-portable.yml`
+- Push a tag like `v0.1.1` to trigger auto build + GitHub Release publish.
+- Manual `workflow_dispatch` builds and uploads exe as workflow artifact.
+
 ## Test
 
 ```bash
